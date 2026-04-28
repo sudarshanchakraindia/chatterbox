@@ -1,0 +1,27 @@
+# Chatterbox — Live Bidirectional Interpreter
+# Install all dependencies with:  pip install -r requirements.txt
+
+# Audio capture and playback
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+pyaudio>=0.2.13
+
+# Speech recognition (STT)
+SpeechRecognition>=3.10.0
+
+# Translation
+deep-translator>=1.11.4
+
+# Text-to-speech (neural, no API key needed)
+edge-tts>=6.1.9
+
+# Windows process scanning
+psutil>=5.9.5
+
+# Windows COM / audio policy (Windows only)
+comtypes>=1.2.0
+pycaw>=20230407
+
+# Windows registry & process APIs
+pywin32>=306
