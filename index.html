@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#07090f"/>
+<meta name="description" content="Chatterbox – Real-time two-way voice interpreter. No human middleman."/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Chatterbox"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<link rel="icon" href="icons/icon-192.png"/>
+<title>Chatterbox – Voice Interpreter</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07090f;--card:#0d1525;--card2:#111e30;
+  --border:rgba(0,200,255,0.12);--border2:rgba(0,200,255,0.25);
+  --cyan:#00c8ff;--green:#00ff9d;--orange:#ff8c42;
+  --red:#ff4757;--muted:#4a7090;--text:#e2eaff;
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 500px 300px at 20% 0%,rgba(0,180,255,0.06) 0%,transparent 70%),radial-gradient(ellipse 400px 300px at 80% 100%,rgba(0,255,150,0.04) 0%,transparent 70%);pointer-events:none;z-index:0;}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(7,9,15,0.98);flex-shrink:0;}
+.logo{display:flex;flex-direction:column;}
+.logo-name{font-family:'Orbitron',monospace;font-size:15px;font-weight:900;color:var(--cyan);letter-spacing:3px;}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-top:1px;}
+.hdr-btns{display:flex;gap:6px;}
+.hbtn{background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.hbtn:hover{border-color:var(--cyan);color:var(--cyan);}
+#sb{position:relative;z-index:5;flex-shrink:0;padding:7px 16px;font-size:11px;font-weight:500;color:var(--muted);background:rgba(13,21,37,0.9);border-bottom:1px solid var(--border);text-align:center;transition:all 0.3s;line-height:1.4;min-height:30px;display:flex;align-items:center;justify-content:center;}
+#sb.ok{color:var(--green);}#sb.err{color:var(--red);}#sb.wrn{color:var(--orange);}
+.mode-tabs{position:relative;z-index:5;flex-shrink:0;display:flex;border-bottom:1px solid var(--border);background:rgba(7,9,15,0.95);}
+.mtab{flex:1;padding:8px 4px;font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.mtab.on{color:var(--cyan);border-bottom-color:var(--cyan);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:5;}
+#faceMode{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.two-halves{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.person{flex:1;display:flex;flex-direction:column;padding:10px 14px 8px;border-bottom:1px solid var(--border);transition:background 0.3s,border-color 0.3s;overflow:hidden;min-height:0;position:relative;}
+.person:last-child{border-bottom:none;}
+.person.listening{background:rgba(0,255,157,0.03);border-color:rgba(0,255,157,0.2);}
+.person.speaking-out{background:rgba(255,140,66,0.04);border-color:rgba(255,140,66,0.3);}
+.person.flipped{transform:rotate(180deg);}
+.tts-indicator{position:absolute;top:8px;right:12px;background:rgba(255,140,66,0.15);border:1px solid rgba(255,140,66,0.4);color:var(--orange);font-size:9px;font-weight:700;letter-spacing:1.5px;padding:3px 10px;border-radius:20px;opacity:0;transition:opacity 0.2s;pointer-events:none;}
+.person.speaking-out .tts-indicator{opacity:1;}
+.person-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-shrink:0;}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.av-a{background:linear-gradient(135deg,#0e2040,#1a3a60);border:2px solid var(--cyan);color:var(--cyan);}
+.av-b{background:linear-gradient(135deg,#082a1a,#0d4a28);border:2px solid var(--green);color:var(--green);}
+.pinfo{flex:1;min-width:0;}
+.pname{font-size:12px;font-weight:600;}
+.plang{font-size:10px;color:var(--muted);margin-top:1px;}
+.pstatus{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.sdot.go{background:var(--green);box-shadow:0 0 6px var(--green);animation:bl 1s infinite;}
+.sdot.talk{background:var(--orange);box-shadow:0 0 6px var(--orange);animation:bl 0.7s infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0.2}}
+.speech-box{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.speech-box::-webkit-scrollbar{width:2px;}
+.speech-box::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.bubble{padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.6;word-break:break-word;}
+.bubble.orig{background:rgba(0,200,255,0.05);border:1px solid rgba(0,200,255,0.1);color:var(--muted);font-size:11px;}
+.bubble.trans{background:rgba(0,255,157,0.06);border:1px solid rgba(0,255,157,0.12);color:var(--text);font-weight:500;}
+.bubble.interim{color:var(--muted);font-style:italic;font-size:12px;padding:2px 12px;}
+.ph{color:#1e3050;font-size:12px;font-style:italic;padding:4px 0;}
+.mic-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:6px 0 4px;gap:12px;}
+.mic-outer{position:relative;width:54px;height:54px;display:flex;align-items:center;justify-content:center;}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,0.08);}
+.mic-outer.on .ring{animation:pr 1.3s ease-out infinite;}
+.mic-outer.on .ring:nth-child(2){animation-delay:0.65s;}
+@keyframes pr{0%{transform:scale(0.9);opacity:0.7}100%{transform:scale(1.6);opacity:0}}
+.mic-btn{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#0e2040,#1a3a60);border:2px solid var(--border2);color:var(--cyan);font-size:20px;cursor:pointer;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 14px rgba(0,0,0,0.4);}
+.mic-btn:hover{transform:scale(1.05);}
+.mic-btn.on-a{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 20px rgba(0,200,255,0.3);}
+.mic-btn.on-b{background:linear-gradient(135deg,#082a1a,#0d4a28);border-color:var(--green);color:var(--green);box-shadow:0 0 20px rgba(0,255,157,0.3);}
+.mic-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.lang-btn{background:var(--card);border:1px solid var(--border2);color:var(--muted);width:34px;height:34px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.lang-btn:hover{border-color:var(--cyan);color:var(--text);}
+.vol-bars{display:flex;align-items:flex-end;gap:2px;height:18px;}
+.vb{width:3px;border-radius:2px;background:rgba(0,200,255,0.12);height:3px;transition:height 0.08s,background 0.08s;}
+.divider{position:relative;z-index:20;display:flex;align-items:center;justify-content:center;height:2px;background:var(--border);flex-shrink:0;}
+.swap-pill{position:absolute;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:3px 12px;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.swap-pill:hover{border-color:var(--cyan);color:var(--cyan);}
+#callMode{flex:1;overflow-y:auto;padding:14px;gap:12px;display:none;flex-direction:column;}
+.section-title{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.role-row{display:flex;gap:8px;margin-bottom:4px;}
+.role-btn{flex:1;padding:10px 6px;background:var(--card2);border:2px solid var(--border);border-radius:10px;color:var(--muted);font-size:12px;font-weight:600;text-align:center;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.role-btn.sel-a{border-color:var(--cyan);color:var(--cyan);background:rgba(0,200,255,0.07);}
+.role-btn.sel-b{border-color:var(--green);color:var(--green);background:rgba(0,255,157,0.07);}
+.big-mic-outer{position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;}
+.big-ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,0.08);}
+.big-mic-outer.on .big-ring{animation:pr 1.3s ease-out infinite;}
+.big-mic-outer.on .big-ring:nth-child(2){animation-delay:0.65s;}
+.big-mic-btn{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0e2040,#1a3a60);border:2px solid var(--border2);color:var(--cyan);font-size:28px;cursor:pointer;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;transition:all 0.25s;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.big-mic-btn.on{background:linear-gradient(135deg,#082a1a,#0d4a28);border-color:var(--green);color:var(--green);box-shadow:0 0 30px rgba(0,255,157,0.3);}
+.big-mic-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.vol-bars-big{display:flex;align-items:flex-end;gap:3px;height:24px;}
+.vbb{width:4px;border-radius:2px;background:rgba(0,200,255,0.12);height:3px;transition:height 0.08s,background 0.08s;}
+.dual-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mini-panel{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;}
+.mini-head{font-size:9px;font-weight:600;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.mini-body{font-size:13px;line-height:1.6;min-height:60px;color:var(--text);word-break:break-word;}
+.mini-ph{color:#1e3050;font-style:italic;font-size:11px;}
+.dev-select{width:100%;background:#111a28;border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;appearance:none;margin-top:6px;}
+.dev-select:focus{outline:none;border-color:var(--cyan);}
+.info-box{background:rgba(0,200,255,0.04);border:1px solid rgba(0,200,255,0.15);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--muted);line-height:1.7;}
+.info-box strong{color:var(--text);}
+.step-row{display:flex;gap:8px;align-items:flex-start;margin-top:8px;}
+.sn{width:18px;height:18px;border-radius:50%;flex-shrink:0;background:rgba(0,200,255,0.1);border:1px solid rgba(0,200,255,0.3);color:var(--cyan);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:flex-end;backdrop-filter:blur(6px);}
+.sheet-overlay.hidden{display:none;}
+.sheet{width:100%;background:var(--card);border-radius:20px 20px 0 0;border-top:1px solid var(--border2);padding:16px 16px 36px;max-height:72vh;display:flex;flex-direction:column;gap:10px;}
+.sheet-hd{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:2px;text-align:center;}
+.sheet-search{width:100%;background:#111a28;border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:9px;font-family:'Inter',sans-serif;font-size:14px;}
+.sheet-search:focus{outline:none;border-color:var(--cyan);}
+.lang-grid{overflow-y:auto;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.lang-grid::-webkit-scrollbar{width:3px;}
+.lang-grid::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.lopt{padding:9px 10px;background:#111a28;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);transition:all 0.15s;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;}
+.lopt:hover,.lopt.sel{border-color:var(--cyan);color:var(--text);background:rgba(0,200,255,0.06);}
+.lopt.sel{color:var(--cyan);}
+.hist-sheet{width:100%;background:var(--card);border-radius:20px 20px 0 0;border-top:1px solid var(--border2);padding:16px 16px 36px;max-height:75vh;display:flex;flex-direction:column;gap:10px;}
+.hist-hd{display:flex;align-items:center;justify-content:space-between;}
+.hist-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:2px;}
+.hlist{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;}
+.hlist::-webkit-scrollbar{width:3px;}
+.hlist::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.hi{background:#111a28;border:1px solid var(--border);border-radius:9px;padding:9px 11px;animation:fi 0.3s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.hi-who{font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px;}
+.hi-o{font-size:11px;color:var(--muted);}
+.hi-t{font-size:12px;color:var(--cyan);font-weight:500;margin-top:2px;}
+.hi-m{font-size:9px;color:#1e3050;margin-top:3px;}
+.empty-h{text-align:center;color:#1e3050;font-size:12px;font-style:italic;padding:16px;}
+.xbtn{background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+#installBanner{display:none;flex-shrink:0;background:linear-gradient(135deg,rgba(0,200,255,0.1),rgba(168,85,247,0.1));border-bottom:1px solid rgba(0,200,255,0.2);padding:8px 16px;align-items:center;justify-content:space-between;gap:10px;}
+.install-text{font-size:11px;color:var(--text);}
+.install-btn{background:var(--cyan);color:#07090f;border:none;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+@media(min-width:600px){
+  .two-halves{flex-direction:row;}
+  .person{border-bottom:none;border-right:1px solid var(--border);}
+  .person:last-child{border-right:none;}
+  .person.flipped{transform:none;}
+  .divider{width:2px;height:auto;flex-direction:column;}
+  .swap-pill{flex-direction:column;padding:10px 5px;}
+  #callMode{padding:20px;}
+}
+</style>
+</head>
+<body>
+
+<div id="installBanner">
+  <div class="install-text">📲 Install Chatterbox as an app</div>
+  <button class="install-btn" onclick="installPWA()">Install</button>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-name">CHATTERBOX</div>
+    <div class="logo-sub">REAL-TIME VOICE INTERPRETER</div>
+  </div>
+  <div class="hdr-btns">
+    <button class="hbtn" onclick="showHistory()" title="History">📜</button>
+    <button class="hbtn" onclick="clearAll()" title="Clear">🗑</button>
+  </div>
+</header>
+
+<div id="sb">Tap a mic button to start speaking</div>
+
+<div class="mode-tabs">
+  <div class="mtab on" id="tab-face" onclick="switchMode('face')">🤝 Face to Face</div>
+  <div class="mtab" id="tab-call" onclick="switchMode('call')">📞 Remote Call</div>
+</div>
+
+<div class="main">
+
+<!-- FACE TO FACE -->
+<div id="faceMode" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+  <div class="two-halves">
+
+    <div class="person" id="personA">
+      <div class="tts-indicator">🔊 SPEAKING</div>
+      <div class="person-hdr">
+        <div class="avatar av-a">A</div>
+        <div class="pinfo">
+          <div class="pname">Person A</div>
+          <div class="plang" id="langLblA">🇮🇳 Hindi</div>
+        </div>
+        <div class="pstatus"><div class="sdot" id="dotA"></div><span id="staA">Idle</span></div>
+      </div>
+      <div class="speech-box" id="boxA"><div class="ph">Tap mic to speak…</div></div>
+      <div class="mic-wrap">
+        <div class="vol-bars" id="volA"></div>
+        <div class="mic-outer" id="outerA">
+          <div class="ring"></div><div class="ring"></div>
+          <button class="mic-btn" id="micA" onclick="toggleMic('A')">🎙️</button>
+        </div>
+        <button class="lang-btn" onclick="openPicker('A')" title="Change language">🌐</button>
+      </div>
+    </div>
+
+    <div class="divider"><div class="swap-pill" onclick="swapLangs()">⇄ swap</div></div>
+
+    <div class="person flipped" id="personB">
+      <div class="tts-indicator">🔊 SPEAKING</div>
+      <div class="person-hdr">
+        <div class="avatar av-b">B</div>
+        <div class="pinfo">
+          <div class="pname">Person B</div>
+          <div class="plang" id="langLblB">🇺🇸 English</div>
+        </div>
+        <div class="pstatus"><div class="sdot" id="dotB"></div><span id="staB">Idle</span></div>
+      </div>
+      <div class="speech-box" id="boxB"><div class="ph">Tap mic to speak…</div></div>
+      <div class="mic-wrap">
+        <div class="vol-bars" id="volB"></div>
+        <div class="mic-outer" id="outerB">
+          <div class="ring"></div><div class="ring"></div>
+          <button class="mic-btn" id="micB" onclick="toggleMic('B')">🎙️</button>
+        </div>
+        <button class="lang-btn" onclick="openPicker('B')" title="Change language">🌐</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- REMOTE CALL -->
+<div id="callMode" style="flex:1;overflow-y:auto;padding:14px;gap:12px;display:none;flex-direction:column;">
+
+  <div class="info-box">
+    <strong>Two-device remote interpreter — no human middleman</strong>
+    <div class="step-row"><div class="sn">1</div><span>Each person opens Chatterbox on <strong>their own phone or laptop</strong>.</span></div>
+    <div class="step-row"><div class="sn">2</div><span>Select your role (A or B) and set both languages below.</span></div>
+    <div class="step-row"><div class="sn">3</div><span>Tap mic and speak. <strong>Translation plays aloud automatically</strong> — the call mic picks it up. Fully hands-free.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">I Am</div>
+    <div class="role-row">
+      <div class="role-btn sel-a" id="roleA" onclick="setRole('A')">👤 Person A</div>
+      <div class="role-btn" id="roleB" onclick="setRole('B')">👤 Person B</div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">MY LANGUAGE (I speak this)</div>
+      <select class="dev-select" id="callMyLang" onchange="updateCallLabels()"></select>
+    </div>
+    <div style="margin-top:10px;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">OTHER PERSON SPEAKS (translate into this)</div>
+      <select class="dev-select" id="callTheirLang" onchange="updateCallLabels()"></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Speak Now</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0;">
+      <div class="big-mic-outer" id="bigOuter">
+        <div class="big-ring"></div><div class="big-ring"></div>
+        <button class="big-mic-btn" id="bigMic" onclick="toggleCallMic()">🎙️</button>
+      </div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);text-transform:uppercase;" id="callMicLabel">TAP TO SPEAK</div>
+      <div class="vol-bars-big" id="volCall"></div>
+    </div>
+  </div>
+
+  <div class="dual-panels">
+    <div class="mini-panel">
+      <div class="mini-head" id="callOrigHead">YOU SAID</div>
+      <div class="mini-body" id="callOrig"><span class="mini-ph">Your speech…</span></div>
+    </div>
+    <div class="mini-panel">
+      <div class="mini-head" id="callTransHead">TRANSLATION</div>
+      <div class="mini-body" id="callTrans"><span class="mini-ph">Translation…</span></div>
+    </div>
+  </div>
+
+</div>
+</div><!-- end .main -->
+
+<!-- LANG PICKER -->
+<div class="sheet-overlay hidden" id="langSheet" onclick="closePicker(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-hd" id="sheetHd">SELECT LANGUAGE</div>
+    <input class="sheet-search" id="lsearch" placeholder="Search…" oninput="filterLangs()"/>
+    <div class="lang-grid" id="lgrid"></div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="sheet-overlay hidden" id="histSheet" onclick="closeHist(event)">
+  <div class="hist-sheet" onclick="event.stopPropagation()">
+    <div class="hist-hd">
+      <div class="hist-title">📜 HISTORY</div>
+      <div style="display:flex;gap:6px;">
+        <button class="xbtn" onclick="exportHistory()" title="Export">⬇</button>
+        <button class="xbtn" onclick="closeHist()">✕</button>
+      </div>
+    </div>
+    <div class="hlist" id="hlist"><div class="empty-h">No conversation yet</div></div>
+  </div>
+</div>
+setVol(id,0,'');}
+
+// ── STATUS ──
+function ss(msg,cls){var e=document.getElementById('sb');e.textContent=msg;e.className=cls||'';}
+
+// ── LABELS ──
+function updateLabels(){
+  document.getElementById('langLblA').textContent=st.A.lang.flag+' '+st.A.lang.name;
+  document.getElementById('langLblB').textContent=st.B.lang.flag+' '+st.B.lang.name;
+}
+updateLabels();
+
+function updateCallLabels(){
+  var ml=document.getElementById('callMyLang');
+  var tl=document.getElementById('callTheirLang');
+  callSt.myLang=LANGS.find(function(l){return l.code===ml.value;})||LANGS[1];
+  callSt.theirLang=LANGS.find(function(l){return l.out===tl.value;})||LANGS[0];
+  document.getElementById('callOrigHead').textContent='YOU SAID ('+callSt.myLang.name.toUpperCase()+')';
+  document.getElementById('callTransHead').textContent='→ '+callSt.theirLang.name.toUpperCase();
+}
+
+function populateCallSelects(){
+  var ml=document.getElementById('callMyLang');
+  var tl=document.getElementById('callTheirLang');
+  var seen={};
+  LANGS.forEach(function(l){
+    if(!seen[l.code]){
+      seen[l.code]=1;
+      var o=document.createElement('option');
+      o.value=l.code;o.textContent=l.flag+' '+l.name;
+      if(l.code==='hi-IN')o.selected=true;
+      ml.appendChild(o);
+    }
+    var o2=document.createElement('option');
+    o2.value=l.out;o2.textContent=l.flag+' '+l.name;
+    if(l.out==='en')o2.selected=true;
+    tl.appendChild(o2);
+  });
+  updateCallLabels();
+}
+populateCallSelects();
+
+// ── ROLE (call mode) ──
+function setRole(r){
+  callRole=r;
+  document.getElementById('roleA').className='role-btn'+(r==='A'?' sel-a':'');
+  document.getElementById('roleB').className='role-btn'+(r==='B'?' sel-b':'');
+}
+
+// ── MODE SWITCH ──
+function switchMode(m){
+  currentMode=m;
+  document.getElementById('tab-face').className='mtab'+(m==='face'?' on':'');
+  document.getElementById('tab-call').className='mtab'+(m==='call'?' on':'');
+  document.getElementById('faceMode').style.display=m==='face'?'flex':'none';
+  document.getElementById('callMode').style.display=m==='call'?'flex':'none';
+}
+
+// ── SWAP (face mode) ──
+function swapLangs(){
+  var t=st.A.lang;st.A.lang=st.B.lang;st.B.lang=t;
+  updateLabels();ss('Languages swapped!','ok');
+}
+
+// ── TRANSLATE ──
+async function doTranslate(text,from,to){
+  var f=from.split('-')[0],t=to.split('-')[0];
+  if(f===t)return text;
+  try{
+    var r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+f+'|'+t);
+    var d=await r.json();
+    if(d.responseStatus===200&&d.responseData&&d.responseData.translatedText)return d.responseData.translatedText;
+    return '[Translation unavailable]';
+  }catch(e){return '[Network error]';}
+}
+
+// ── TTS ENGINE ──
+// Accepts optional onDone callback fired when speech finishes
+function doSpeak(text,langOut,onDone){
+  if(!window.speechSynthesis||!text){if(onDone)onDone();return;}
+  var SS=window.speechSynthesis;
+  var ttsLang=TTS[langOut]||langOut;
+  SS.cancel();
+  function speak(){
+    var voices=SS.getVoices();
+    var voice=voices.find(function(v){return v.lang===ttsLang;})||
+              voices.find(function(v){return v.lang.startsWith(ttsLang.split('-')[0]);})||
+              voices.find(function(v){return v.lang.startsWith('en');});
+    var u=new SpeechSynthesisUtterance(text);
+    if(voice){u.voice=voice;u.lang=voice.lang;}else{u.lang=ttsLang;}
+    u.rate=0.95;u.pitch=1;u.volume=1;
+    u.onend=function(){if(onDone)onDone();};
+    u.onerror=function(e){
+      if(e.error==='interrupted'||e.error==='canceled'){if(onDone)onDone();return;}
+      ss('⚠️ Voice error: '+e.error,'wrn');
+      if(onDone)onDone();
+    };
+    try{SS.speak(u);}catch(err){if(onDone)onDone();}
+  }
+  if(SS.getVoices().length>0){speak();}
+  else{SS.onvoiceschanged=function(){speak();};setTimeout(speak,500);}
+}
+
+// Chrome TTS keepalive
+setInterval(function(){
+  if(window.speechSynthesis&&!window.speechSynthesis.speaking)window.speechSynthesis.resume();
+},5000);
+
+// ── FACE-TO-FACE: toggle mic ──
+// Simple: tap to start, tap to stop. No pendingSpeak intercept.
+function toggleMic(p){
+  if(st[p].listening)stopMic(p);else startMic(p);
+}
+
+async function startMic(p){
+  if(!SR){ss('❌ Use Chrome or Edge browser','err');return;}
+  var other=p==='A'?'B':'A';
+  // Stop the other person's mic if active
+  if(st[other].listening)stopMic(other);
+  // Cancel any playing TTS
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  ss('🔐 Requesting microphone…','');
+  var s=st[p];
+  try{
+    s.stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  }catch(err){
+    if(err.name==='NotAllowedError')ss('❌ Mic blocked — click 🔒 in address bar → Allow','err');
+    else if(err.name==='NotFoundError')ss('❌ No microphone found','err');
+    else ss('❌ Mic error: '+err.message,'err');
+    return;
+  }
+  // Volume analyser
+  try{
+    s.actx=new(window.AudioContext||window.webkitAudioContext)();
+    var an=s.actx.createAnalyser();an.fftSize=64;
+    s.actx.createMediaStreamSource(s.stream).connect(an);
+    var data=new Uint8Array(an.frequencyBinCount);
+    var volId='vol'+p,col=p==='A'?'#00c8ff':'#00ff9d';
+    function tick(){
+      if(!s.listening){resetVol(volId);return;}
+      an.getByteFrequencyData(data);
+      var avg=0;for(var i=0;i<data.length;i++)avg+=data[i];
+      setVol(volId,(avg/data.length)*1.4,col);
+      s.vraf=requestAnimationFrame(tick);
+    }
+    tick();
+  }catch(e){}
+  s.listening=true;
+  setMicUI(p,true);
+  ss('✅ Person '+p+' — speak in '+s.lang.flag+' '+s.lang.name,'ok');
+  startRec(p);
+}
+
+function startRec(p){
+  if(!st[p].listening)return;
+  var s=st[p];
+  var other=p==='A'?'B':'A';
+  s.rec=new SR();
+  s.rec.lang=s.lang.code;
+  s.rec.continuous=false;
+  s.rec.interimResults=true;
+  s.rec.maxAlternatives=1;
+
+  s.rec.onresult=async function(e){
+    var interim='',final='';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    if(interim)showInterim(p,interim);
+    if(final){
+      clearInterim(p);
+      addBubble(p,final,'orig');
+      ss('⏳ Translating…','');
+      // Abort recognition while TTS plays to prevent feedback loop
+      try{s.rec.abort();}catch(ex){}
+      var trans=await doTranslate(final,s.lang.out,st[other].lang.out);
+      addBubble(other,trans,'trans');
+      addHist('Person '+p,final,trans,st[other].lang);
+      // Show speaking-out indicator on OTHER person's panel
+      setPanelTTS(other,true);
+      ss('🔊 Speaking '+st[other].lang.flag+' '+st[other].lang.name+'…','ok');
+      doSpeak(trans,st[other].lang.out,function(){
+        // TTS done — resume listening for person p
+        setPanelTTS(other,false);
+        ss('✅ Done — Person '+p+' speak again or Person '+other+' respond','ok');
+        if(s.listening)setTimeout(function(){startRec(p);},200);
+      });
+    }
+  };
+
+  s.rec.onerror=function(e){
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    if(e.error==='not-allowed'){ss('❌ Mic permission revoked','err');stopMic(p);return;}
+    ss('⚠️ '+e.error,'wrn');
+  };
+
+  // Only auto-restart on natural end if TTS is NOT playing
+  // (TTS callback handles restart after speech)
+  s.rec.onend=function(){
+    if(s.listening&&!window.speechSynthesis.speaking){
+      setTimeout(function(){startRec(p);},150);
+    }
+  };
+
+  try{s.rec.start();}catch(e){setTimeout(function(){startRec(p);},300);}
+}
+
+function stopMic(p){
+  var s=st[p];
+  s.listening=false;
+  if(s.rec){try{s.rec.abort();}catch(e){}s.rec=null;}
+  if(s.vraf){cancelAnimationFrame(s.vraf);s.vraf=null;}
+  if(s.stream){s.stream.getTracks().forEach(function(t){t.stop();});s.stream=null;}
+  if(s.actx){try{s.actx.close();}catch(e){}s.actx=null;}
+  resetVol('vol'+p);
+  setMicUI(p,false);
+  setPanelTTS(p,false);
+}
+
+function setMicUI(p,on){
+  var btn=document.getElementById('mic'+p);
+  var outer=document.getElementById('outer'+p);
+  var pel=document.getElementById('person'+p);
+  var dot=document.getElementById('dot'+p);
+  var sta=document.getElementById('sta'+p);
+  if(on){
+    btn.textContent='⏹️';
+    btn.className='mic-btn on-'+p.toLowerCase();
+    outer.classList.add('on');
+    pel.classList.add('listening');
+    dot.className='sdot go';
+    sta.textContent='Listening…';
+  }else{
+    btn.textContent='🎙️';
+    btn.className='mic-btn';
+    outer.classList.remove('on');
+    pel.classList.remove('listening','speaking-out');
+    dot.className='sdot';
+    sta.textContent='Idle';
+  }
+}
+
+function setPanelTTS(p,on){
+  var pel=document.getElementById('person'+p);
+  var dot=document.getElementById('dot'+p);
+  var sta=document.getElementById('sta'+p);
+  if(on){
+    pel.classList.add('speaking-out');
+    dot.className='sdot talk';
+    sta.textContent='Playing…';
+  }else{
+    pel.classList.remove('speaking-out');
+    if(!st[p].listening){dot.className='sdot';sta.textContent='Idle';}
+  }
+}
+
+// ── CALL MODE MIC ──
+function toggleCallMic(){
+  if(callSt.listening)stopCallMic();else startCallMic();
+}
+
+async function startCallMic(){
+  if(!SR){ss('❌ Use Chrome or Edge','err');return;}
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  ss('🔐 Requesting microphone…','');
+  try{
+    callSt.stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  }catch(err){
+    if(err.name==='NotAllowedError')ss('❌ Mic blocked — click 🔒 in address bar → Allow','err');
+    else ss('❌ Mic error: '+err.message,'err');
+    return;
+  }
+  try{
+    callSt.actx=new(window.AudioContext||window.webkitAudioContext)();
+    var an=callSt.actx.createAnalyser();an.fftSize=64;
+    callSt.actx.createMediaStreamSource(callSt.stream).connect(an);
+    var data=new Uint8Array(an.frequencyBinCount);
+    function tick(){
+      if(!callSt.listening){resetVol('volCall');return;}
+      an.getByteFrequencyData(data);
+      var avg=0;for(var i=0;i<data.length;i++)avg+=data[i];
+      setVol('volCall',(avg/data.length)*1.4,'#00c8ff');
+      callSt.vraf=requestAnimationFrame(tick);
+    }
+    tick();
+  }catch(e){}
+  callSt.listening=true;
+  var bm=document.getElementById('bigMic');
+  bm.textContent='⏹️';bm.className='big-mic-btn on';
+  document.getElementById('bigOuter').classList.add('on');
+  document.getElementById('callMicLabel').textContent='LISTENING — TAP TO STOP';
+  ss('✅ Speaking '+callSt.myLang.flag+' '+callSt.myLang.name+' → '+callSt.theirLang.flag+' '+callSt.theirLang.name,'ok');
+  startCallRec();
+}
+
+function startCallRec(){
+  if(!callSt.listening)return;
+  callSt.rec=new SR();
+  callSt.rec.lang=callSt.myLang.code;
+  callSt.rec.continuous=false;
+  callSt.rec.interimResults=true;
+  callSt.rec.maxAlternatives=1;
+
+  callSt.rec.onresult=async function(e){
+    var interim='',final='';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    if(interim)document.getElementById('callOrig').textContent=interim;
+    if(final){
+      document.getElementById('callOrig').textContent=final;
+      document.getElementById('callTrans').innerHTML='<span class="mini-ph">Translating…</span>';
+      ss('⏳ Translating…','');
+      // Abort recognition while TTS plays
+      try{callSt.rec.abort();}catch(ex){}
+      var trans=await doTranslate(final,callSt.myLang.out,callSt.theirLang.out);
+      document.getElementById('callTrans').textContent=trans;
+      addHist('Person '+callRole,final,trans,callSt.theirLang);
+      callSt.ttsPlaying=true;
+      document.getElementById('callMicLabel').textContent='🔊 SPEAKING TRANSLATION…';
+      ss('🔊 Playing translation aloud…','ok');
+      doSpeak(trans,callSt.theirLang.out,function(){
+        callSt.ttsPlaying=false;
+        document.getElementById('callMicLabel').textContent='LISTENING — TAP TO STOP';
+        ss('✅ Done — speak again','ok');
+        // Resume listening
+        if(callSt.listening)setTimeout(startCallRec,200);
+      });
+    }
+  };
+
+  callSt.rec.onerror=function(e){
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    if(e.error==='not-allowed'){ss('❌ Mic revoked','err');stopCallMic();return;}
+    ss('⚠️ '+e.error,'wrn');
+  };
+
+  callSt.rec.onend=function(){
+    if(callSt.listening&&!window.speechSynthesis.speaking){
+      setTimeout(startCallRec,150);
+    }
+  };
+
+  try{callSt.rec.start();}catch(e){setTimeout(startCallRec,300);}
+}
+
+function stopCallMic(){
+  callSt.listening=false;
+  if(callSt.rec){try{callSt.rec.abort();}catch(e){}callSt.rec=null;}
+  if(callSt.vraf){cancelAnimationFrame(callSt.vraf);callSt.vraf=null;}
+  if(callSt.stream){callSt.stream.getTracks().forEach(function(t){t.stop();});callSt.stream=null;}
+  if(callSt.actx){try{callSt.actx.close();}catch(e){}callSt.actx=null;}
+  resetVol('volCall');
+  var bm=document.getElementById('bigMic');
+  bm.textContent='🎙️';bm.className='big-mic-btn';
+  document.getElementById('bigOuter').classList.remove('on');
+  document.getElementById('callMicLabel').textContent='TAP TO SPEAK';
+  ss('Stopped.','');
+}
+
+// ── BUBBLES ──
+var iEls={A:null,B:null};
+function showInterim(p,t){
+  var box=document.getElementById('box'+p);
+  if(!iEls[p]){var el=document.createElement('div');el.className='bubble interim';box.appendChild(el);iEls[p]=el;}
+  iEls[p].textContent=t;box.scrollTop=box.scrollHeight;
+}
+function clearInterim(p){if(iEls[p]){iEls[p].remove();iEls[p]=null;}}
+function addBubble(p,text,type){
+  var box=document.getElementById('box'+p);
+  var ph=box.querySelector('.ph');if(ph)ph.remove();
+  var el=document.createElement('div');
+  el.className='bubble '+type;el.textContent=text;
+  box.appendChild(el);box.scrollTop=box.scrollHeight;
+}
+
+// ── LANG PICKER ──
+function openPicker(p){
+  activePicker=p;
+  document.getElementById('sheetHd').textContent='PERSON '+p+' LANGUAGE';
+  document.getElementById('lsearch').value='';
+  renderGrid('');
+  document.getElementById('langSheet').classList.remove('hidden');
+  setTimeout(function(){document.getElementById('lsearch').focus();},100);
+}
+function closePicker(e){
+  if(!e||e.target===document.getElementById('langSheet'))
+    document.getElementById('langSheet').classList.add('hidden');
+}
+function filterLangs(){renderGrid(document.getElementById('lsearch').value);}
+function renderGrid(q){
+  var g=document.getElementById('lgrid');
+  var sel=activePicker?st[activePicker].lang.code:'';
+  var seen={};
+  var filtered=LANGS.filter(function(l){
+    if(seen[l.code])return false;seen[l.code]=1;
+    return !q||l.name.toLowerCase().indexOf(q.toLowerCase())>=0;
+  });
+  g.innerHTML=filtered.map(function(l){
+    return '<div class="lopt'+(l.code===sel?' sel':'')+'" onclick="pickLang(\''+l.code+'\')">'+l.flag+' '+l.name+'</div>';
+  }).join('');
+}
+function pickLang(code){
+  var l=LANGS.find(function(x){return x.code===code;});
+  if(!l||!activePicker)return;
+  st[activePicker].lang=l;
+  updateLabels();
+  document.getElementById('langSheet').classList.add('hidden');
+  ss('Language updated!','ok');
+}
+
+// ── HISTORY ──
+function addHist(who,orig,trans,targetLang){
+  var t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  history.unshift({who:who,orig:orig,trans:trans,tl:targetLang,time:t});
+}
+function showHistory(){
+  var list=document.getElementById('hlist');
+  if(!history.length){
+    list.innerHTML='<div class="empty-h">No conversation yet</div>';
+  }else{
+    list.innerHTML=history.map(function(h){
+      return '<div class="hi">'+
+        '<div class="hi-who">'+h.who+' → '+(h.tl?h.tl.flag+' '+h.tl.name:'')+'</div>'+
+        '<div class="hi-o">'+esc(h.orig)+'</div>'+
+        '<div class="hi-t">'+esc(h.trans)+'</div>'+
+        '<div class="hi-m">'+h.time+'</div>'+
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('histSheet').classList.remove('hidden');
+}
+function closeHist(e){
+  if(!e||e.target===document.getElementById('histSheet'))
+    document.getElementById('histSheet').classList.add('hidden');
+}
+function exportHistory(){
+  if(!history.length){alert('No history to export.');return;}
+  var txt=history.map(function(h){
+    return '['+h.time+'] '+h.who+'\nOriginal:    '+h.orig+'\nTranslated:  '+h.trans+'\n';
+  }).join('\n');
+  var blob=new Blob([txt],{type:'text/plain'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='chatterbox-history-'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+}
+
+// ── CLEAR ALL ──
+function clearAll(){
+  ['A','B'].forEach(function(p){
+    if(st[p].listening)stopMic(p);
+    document.getElementById('box'+p).innerHTML='<div class="ph">Tap mic to speak…</div>';
+  });
+  if(callSt.listening)stopCallMic();
+  document.getElementById('callOrig').innerHTML='<span class="mini-ph">Your speech…</span>';
+  document.getElementById('callTrans').innerHTML='<span class="mini-ph">Translation…</span>';
+  history=[];
+  window.speechSynthesis&&window.speechSynthesis.cancel();
+  iEls={A:null,B:null};
+  ss('Cleared — ready','');
+}
+
+// ── UTILS ──
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── INIT ──
+(function(){
+  if(window.speechSynthesis){
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices();};
+  }
+  if(!SR){
+    ['micA','micB','bigMic'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.disabled=true;
+    });
+    ss('❌ Use Google Chrome or Microsoft Edge — speech not supported here','err');
+    return;
+  }
+  if(navigator.permissions){
+    navigator.permissions.query({name:'microphone'}).then(function(p){
+      if(p.state==='denied')ss('❌ Mic blocked — click 🔒 in address bar → Allow microphone','err');
+      else ss('Ready — tap 🎙️ to start','');
+      p.onchange=function(){
+        if(p.state==='denied')ss('❌ Mic blocked','err');
+        else ss('Mic access granted! Tap 🎙️ to start.','ok');
+      };
+    }).catch(function(){ss('Ready — tap 🎙️ to start','');});
+  }else{
+    ss('Ready — tap 🎙️ to start','');
+  }
+})();
+</script>
+</body>
+</html>
